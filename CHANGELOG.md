@@ -1,3 +1,7 @@
+## 0.8.1
+
+* enable links clickable on iOS.
+
 ## 0.8.0
 
 * fix the `position: fixed` element not working as expected.
