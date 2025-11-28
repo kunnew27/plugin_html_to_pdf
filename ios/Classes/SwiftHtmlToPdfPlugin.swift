@@ -34,7 +34,29 @@ public class SwiftHtmlToPdfPlugin: NSObject, FlutterPlugin{
         contentController.addUserScript(WKUserScript(source: "document.documentElement.style.webkitTouchCallout='none';", injectionTime: .atDocumentEnd, forMainFrameOnly: true))
         wkWebView.scrollView.bounces = false
         
-        let htmlFileContent = FileHelper.getContent(from: htmlFilePath!) // get html content from file
+        var htmlFileContent = FileHelper.getContent(from: htmlFilePath!) // get html content from file
+        
+        // Inject CSS to support repeating table headers on each page
+        let repeatHeaderCSS = """
+        <style>
+        @media print {
+            thead { display: table-header-group !important; }
+            tfoot { display: table-footer-group !important; }
+            tr { page-break-inside: avoid !important; }
+            table { page-break-inside: auto !important; }
+        }
+        </style>
+        """
+        
+        // Insert CSS after <head> or at the beginning if no head tag
+        if htmlFileContent.lowercased().contains("<head>") {
+            htmlFileContent = htmlFileContent.replacingOccurrences(of: "<head>", with: "<head>" + repeatHeaderCSS, options: .caseInsensitive)
+        } else if htmlFileContent.lowercased().contains("<html>") {
+            htmlFileContent = htmlFileContent.replacingOccurrences(of: "<html>", with: "<html><head>" + repeatHeaderCSS + "</head>", options: .caseInsensitive)
+        } else {
+            htmlFileContent = repeatHeaderCSS + htmlFileContent
+        }
+        
         wkWebView.loadHTMLString(htmlFileContent, baseURL: Bundle.main.bundleURL) // load html into hidden webview
         let fmt: UIPrintFormatter
         if linksClickable {

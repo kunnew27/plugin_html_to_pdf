@@ -27,7 +27,29 @@ class HtmlToPdfConverter {
         callback: Callback
     ) {
         val webView = WebView(applicationContext)
-        val htmlContent = File(filePath).readText(Charsets.UTF_8)
+        var htmlContent = File(filePath).readText(Charsets.UTF_8)
+        
+        // Inject CSS to support repeating table headers on each page
+        val repeatHeaderCSS = """
+            <style>
+            @media print {
+                thead { display: table-header-group !important; }
+                tfoot { display: table-footer-group !important; }
+                tr { page-break-inside: avoid !important; }
+                table { page-break-inside: auto !important; }
+            }
+            </style>
+        """.trimIndent()
+        
+        // Insert CSS after <head> or at the beginning if no head tag
+        htmlContent = if (htmlContent.contains("<head>", ignoreCase = true)) {
+            htmlContent.replaceFirst("<head>", "<head>$repeatHeaderCSS", ignoreCase = true)
+        } else if (htmlContent.contains("<html>", ignoreCase = true)) {
+            htmlContent.replaceFirst("<html>", "<html><head>$repeatHeaderCSS</head>", ignoreCase = true)
+        } else {
+            repeatHeaderCSS + htmlContent
+        }
+        
         webView.settings.javaScriptEnabled = true
         webView.settings.javaScriptCanOpenWindowsAutomatically = true
         webView.settings.allowFileAccess = true
